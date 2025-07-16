@@ -1,0 +1,22 @@
+{
+  "name": "practice",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --no-warnings index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/kenxx16/practice_25.git"
+  },
+  "author": "Gribchenko",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kenxx16/practice_25/issues"
+  },
+  "homepage": "https://github.com/kenxx16/practice_25#readme",
+  "description": "",
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}
