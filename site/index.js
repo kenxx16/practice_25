@@ -26,7 +26,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         $('#get_ka').on('click', function(e){
             socket.send(`{"get_data": ${$('#number_ka').val()}}`)
-            
         })
+
+        socket.onmessage = function (event) {
+            let data = JSON.parse(event.data);
+
+            console.log(data);
+            if (data.trace_data) {
+                L.polyline(data.trace_data, {color: 'blue'}).addTo(mymap);
+            }
+            
+
+        }
     }
 })

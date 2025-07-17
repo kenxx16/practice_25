@@ -65,7 +65,7 @@ async function getStatus(){
 async function getData(){
     let ephemerisData = await getEphemeris()
     let statusData = await getStatus()
-    console.log(ephemerisData);
+    console.log(ephemerisData[0]);
 
     let test_ka = ephemerisData[0]
 
@@ -94,19 +94,29 @@ async function getData(){
 
         // 3. Вычисление среднего движения (n)
         const n0 = 2 * Math.PI / T_ob;              // Среднее движение (рад/с)
+        
+        
         const deltaTime = currentTime - T_Omega;     // Время с момента прохождения узла
-        console.log(deltaTime);
+
+        
         
         const n = n0 + DeltaT * deltaTime;           // Скорректированное среднее движение
 
+        
+        // console.log(DeltaT * deltaTime);
+        
+        // console.log("n= " + n);
+        
         // 4. Вычисление средней аномалии (M)
         const M = n * deltaTime;
+
 
         // 5. Решение уравнения Кеплера для эксцентрической аномалии (E)
         let E = M;
         for (let iter = 0; iter < 10; iter++) {
             E = M + e * Math.sin(E);
         }
+        
 
         // 6. Вычисление истинной аномалии (ν)
         const trueAnomaly = 2 * Math.atan2(
@@ -114,9 +124,14 @@ async function getData(){
             Math.sqrt(1 - e) * Math.cos(E / 2)
         );
 
+        
+
         // 7. Вычисление радиуса-вектора (r)
         const a = Math.cbrt(MU / (n * n));           // Большая полуось
         const r = a * (1 - e * e) / (1 + e * Math.cos(trueAnomaly));
+
+        // console.log(r);
+        
 
         // 8. Координаты в орбитальной плоскости
         const X_orb = r * Math.cos(trueAnomaly);
@@ -143,9 +158,15 @@ async function getData(){
 
         // 11. Учёт вращения Земли (переход в ECEF)
         const earthRotationAngle = EARTH_ROTATION_RATE * deltaTime;
+
+        // console.log("earthRotationAngle= " + earthRotationAngle);
+
         const X_ECEF = X * Math.cos(earthRotationAngle) + Y * Math.sin(earthRotationAngle);
         const Y_ECEF = -X * Math.sin(earthRotationAngle) + Y * Math.cos(earthRotationAngle);
         const Z_ECEF = Z;
+
+        console.log(X_ECEF);
+        
 
         return {
             X: X_ECEF,
@@ -200,29 +221,39 @@ async function getData(){
             i : test_ka.i,          // Наклонение (град)
             L_Omega : test_ka.Lomega,    // Долгота восходящего узла (град)
             omega : test_ka.W,      // Аргумент перигея (град)
-            DeltaT : test_ka.deltaT      // Скорость изменения периода (с/с)
+            DeltaT : 0//Number(test_ka.deltaT)      // Скорость изменения периода (с/с)
         };
 
-    const currentTime = 0; // Текущее время (1.5 часа после 00:00)
-    const position = calculateGLONASSPosition(glonassParams, currentTime);
-
-    console.log("Координаты спутника ГЛОНАСС (ECEF):");
-    console.log(`X: ${position.X.toFixed(2)} м`);
-    console.log(`Y: ${position.Y.toFixed(2)} м`);
-    console.log(`Z: ${position.Z.toFixed(2)} м`);
-
-    const geodetic = ecefToGeodetic(position.X, position.Y, position.Z);
-
-    console.log("Геодезические координаты спутника ГЛОНАСС:");
-    console.log(`Широта: ${geodetic.latitude.toFixed(6)}°`);
-    console.log(`Долгота: ${geodetic.longitude.toFixed(6)}°`);
-    console.log(`Высота: ${geodetic.height.toFixed(2)} м`);
+    console.log(glonassParams);
     
+
+    const currentTime = 0; // Текущее время (1.5 часа после 00:00)
+
+    let trace = []
+    for (let currentTime = 0; currentTime < 40000; currentTime+=60) {
+        const position = calculateGLONASSPosition(glonassParams, currentTime);
+        const geodetic = ecefToGeodetic(position.X, position.Y, position.Z);
+        trace.push([geodetic.latitude.toFixed(6), geodetic.longitude.toFixed(6)])
+    }
+    
+
+    // console.log("Координаты спутника ГЛОНАСС (ECEF):");
+    // console.log(`X: ${position.X.toFixed(2)} м`);
+    // console.log(`Y: ${position.Y.toFixed(2)} м`);
+    // console.log(`Z: ${position.Z.toFixed(2)} м`);
+
+    
+
+    // console.log("Геодезические координаты спутника ГЛОНАСС:");
+    // console.log(`Широта: ${geodetic.latitude.toFixed(6)}°`);
+    // console.log(`Долгота: ${geodetic.longitude.toFixed(6)}°`);
+    // console.log(`Высота: ${geodetic.height.toFixed(2)} м`);
+    return trace
 }
 
 server.listen(3000, function () {
     console.log("SERVER START");
-    getData()
+    // getData()
 })
 
 
@@ -238,7 +269,8 @@ wss1.on('connection', function connection(ws) {
     ws.on('message', async function(message) {
         let json_res = JSON.parse(message)
         if (json_res.get_data) {
-            console.log(json_res);
+            let out_data = await getData()
+            clients[id].send(`{"trace_data": ${JSON.stringify(out_data)}}`);
         }
     })
 
