@@ -33,8 +33,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
             console.log(data);
             if (data.trace_data) {
-                L.polyline(data.trace_data, {color: 'blue'}).addTo(mymap);
+                trace_arr = []
+                trace_line = 0;
+                trace_arr[trace_line] = []
+                for(let point_i in data.trace_data){
+                    if (point_i != 0) {
+                        if ((Math.sign(data.trace_data[point_i-1][1] > 0))&&(Math.sign(data.trace_data[point_i][1] < 0))) {
+                            trace_line++
+                            trace_arr[trace_line] = []
+                        }
+                    }
+                    trace_arr[trace_line].push(data.trace_data[point_i])
+                }
+                console.log(trace_arr);
+                L.polyline(trace_arr, {color: 'blue'}).addTo(mymap);
             }
+            
+            
             
 
         }

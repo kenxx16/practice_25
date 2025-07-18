@@ -62,241 +62,13 @@ async function getStatus(){
     })
 }
 
-async function getData(){
+async function getData(num_ka = 1){
+    console.log(num_ka);
+    
     let ephemerisData = await getEphemeris()
     let statusData = await getStatus()
-    console.log(ephemerisData[0]);
 
-    let test_ka = ephemerisData[1]
-
-    // const MU = 3.986004418e14; // Гравитационный параметр Земли (м^3/с^2)
-    // const EARTH_ROTATION_RATE = 7.292115e-5; // Угловая скорость вращения Земли (рад/с)
-    // const EARTH_A = 6378136; // Большая полуось эллипсоида ПЗ-90 (м)
-    // const EARTH_F = 1/298.25784; // Сжатие эллипсоида ПЗ-90
-    // const EARTH_E2 = 2*EARTH_F - EARTH_F*EARTH_F; // Квадрат эксцентриситета
-
-    // function calculateGLONASSPosition(params, currentTime) {
-    //     // 1. Извлечение параметров орбиты
-    //     const {
-    //         T_Omega,    // Время прохождения восходящего узла (с)
-    //         T_ob,       // Период обращения (с)
-    //         e,          // Эксцентриситет
-    //         i,          // Наклонение (град)
-    //         L_Omega,    // Долгота восходящего узла (град)
-    //         omega,      // Аргумент перигея (град)
-    //         DeltaT      // Скорость изменения периода (с/с)
-    //     } = params;
-
-    //     // 2. Преобразование единиц
-    //     const inclination = i * Math.PI / 180;       // в радианы
-    //     const longitudeAscendingNode = L_Omega * Math.PI / 180;
-    //     const argumentOfPeriapsis = omega * Math.PI / 180;
-
-    //     // 3. Вычисление среднего движения (n)
-    //     const n0 = 2 * Math.PI / T_ob;              // Среднее движение (рад/с)
-        
-        
-    //     const deltaTime = currentTime - T_Omega;     // Время с момента прохождения узла
-
-        
-        
-    //     const n = n0 + DeltaT * deltaTime;           // Скорректированное среднее движение
-
-        
-    //     // console.log(DeltaT * deltaTime);
-        
-    //     // console.log("n= " + n);
-        
-    //     // 4. Вычисление средней аномалии (M)
-    //     const M = n * deltaTime;
-
-
-    //     // 5. Решение уравнения Кеплера для эксцентрической аномалии (E)
-    //     let E = M;
-    //     for (let iter = 0; iter < 10; iter++) {
-    //         E = M + e * Math.sin(E);
-    //     }
-        
-
-    //     // 6. Вычисление истинной аномалии (ν)
-    //     const trueAnomaly = 2 * Math.atan2(
-    //         Math.sqrt(1 + e) * Math.sin(E / 2),
-    //         Math.sqrt(1 - e) * Math.cos(E / 2)
-    //     );
-
-    //     console.log(trueAnomaly);
-        
-
-        
-
-    //     // 7. Вычисление радиуса-вектора (r)
-    //     const a = Math.cbrt(MU / (n * n));           // Большая полуось
-    //     const r = a * (1 - e * e) / (1 + e * Math.cos(trueAnomaly));
-        
-
-    //     // console.log(r);
-        
-
-    //     // 8. Координаты в орбитальной плоскости
-    //     const X_orb = r * Math.cos(trueAnomaly);
-    //     const Y_orb = r * Math.sin(trueAnomaly);
-
-    //     // 9. Вычисление аргумента широты (θ = ω + ν)
-    //     const argumentOfLatitude = argumentOfPeriapsis + trueAnomaly;
-
-    //     // 10. Преобразование в инерциальную систему (ECI)
-    //     const cosOmega = Math.cos(longitudeAscendingNode);
-    //     const sinOmega = Math.sin(longitudeAscendingNode);
-    //     const cosTheta = Math.cos(argumentOfLatitude);
-    //     const sinTheta = Math.sin(argumentOfLatitude);
-    //     const cosI = Math.cos(inclination);
-    //     const sinI = Math.sin(inclination);
-
-    //     const X = X_orb * (cosOmega * cosTheta - sinOmega * sinTheta * cosI) - 
-    //              Y_orb * (cosOmega * sinTheta + sinOmega * cosTheta * cosI);
-    
-    //     const Y = X_orb * (sinOmega * cosTheta + cosOmega * sinTheta * cosI) - 
-    //                 Y_orb * (sinOmega * sinTheta - cosOmega * cosTheta * cosI);
-        
-    //     const Z = (X_orb * sinTheta + Y_orb * cosTheta) * sinI;
-
-    //     const deltaTimeSinceEpoch = currentTime - params.T_Omega;
-    
-    //     // Угол поворота Земли за это время
-    //     const earthRotationAngle = EARTH_ROTATION_RATE * deltaTimeSinceEpoch;
-        
-    //     // Матрица поворота
-    //     const cosRot = Math.cos(earthRotationAngle);
-    //     const sinRot = Math.sin(earthRotationAngle);
-        
-    //     // Преобразование в ECEF
-    //     const X_ECEF = X * cosRot + Y * sinRot;
-    //     const Y_ECEF = -X * sinRot + Y * cosRot;
-    //     const Z_ECEF = Z;
-
-    //     return {
-    //         X: X_ECEF,
-    //         Y: Y_ECEF,
-    //         Z: Z_ECEF,
-    //         timestamp: currentTime
-    //     };
-
-    //     // 11. Учёт вращения Земли (переход в ECEF)
-    //     // const earthRotationAngle = EARTH_ROTATION_RATE * deltaTime;
-
-    //     // console.log(earthRotationAngle);
-
-
-    //     // //  ???
-    //     // const X_ECEF = X * Math.cos(earthRotationAngle) + Y * Math.sin(earthRotationAngle);
-    //     // const Y_ECEF = -X * Math.sin(earthRotationAngle) + Y * Math.cos(earthRotationAngle);
-    //     // const Z_ECEF = Z;
-
-        
-        
-
-    //     // return {
-    //     //     X: X_ECEF,
-    //     //     Y: Y_ECEF,
-    //     //     Z: Z_ECEF,
-    //     //     timestamp: currentTime
-    //     // };
-
-    //     // return {
-    //     //     X: X,
-    //     //     Y: Y,
-    //     //     Z: Z,
-    //     //     timestamp: currentTime
-    //     // };
-
-        
-    // }
-
-    // function ecefToGeodetic(X, Y, Z) {
-    // // Алгоритм преобразования ECEF в геодезические координаты (метод Bowring)
-    //     const p = Math.sqrt(X*X + Y*Y);
-    //     const theta = Math.atan2(Z * EARTH_A, p * EARTH_A * (1 - EARTH_F));
-        
-    //     // Первое приближение
-    //     let phi = Math.atan2(Z + EARTH_E2 * EARTH_A * Math.pow(Math.sin(theta), 3) / (1 - EARTH_F),
-    //                         p - EARTH_E2 * EARTH_A * Math.pow(Math.cos(theta), 3));
-        
-    //     // Уточняем значение
-    //     let N = EARTH_A / Math.sqrt(1 - EARTH_E2 * Math.pow(Math.sin(phi), 2));
-    //     let h = p / Math.cos(phi) - N;
-        
-    //     // Итеративное уточнение (обычно 2-3 итерации достаточно)
-    //     for (let i = 0; i < 5; i++) {
-    //         N = EARTH_A / Math.sqrt(1 - EARTH_E2 * Math.pow(Math.sin(phi), 2));
-    //         h = p / Math.cos(phi) - N;
-    //         phi = Math.atan2(Z, p * (1 - EARTH_E2 * N / (N + h)));
-    //     }
-        
-    //     // Вычисляем долготу
-    //     const lambda = Math.atan2(Y, X);
-        
-    //     // Преобразуем в градусы
-    //     const latitude = phi * 180 / Math.PI;
-    //     const longitude = lambda * 180 / Math.PI;
-        
-    //     return {
-    //         latitude,
-    //         longitude,
-    //         height: h,
-    //         lat: latitude,       // Алиасы для удобства
-    //         lon: longitude,
-    //         // alt: heightib
-    //     };
-    // }
-
-    // function ecefToGeodetic2(X, Y, Z) {
-    //     // Алгоритм Olson (1996) с улучшениями для полюсов
-    //     const p = Math.sqrt(X*X + Y*Y);
-    //     const lon = Math.atan2(Y, X);
-        
-    //     // Начальное приближение
-    //     let lat = Math.atan2(Z, p * (1 - EARTH_E2));
-    //     let N = EARTH_A / Math.sqrt(1 - EARTH_E2 * Math.sin(lat)*Math.sin(lat));
-    //     let h = 0;
-        
-    //     // Итеративный процесс
-    //     for (let i = 0; i < 5; i++) {
-    //         const sinLat = Math.sin(lat);
-    //         N = EARTH_A / Math.sqrt(1 - EARTH_E2 * sinLat*sinLat);
-    //         h = p / Math.cos(lat) - N;
-    //         lat = Math.atan2(Z, p * (1 - EARTH_E2 * N/(N + h)));
-    //     }
-        
-    //     // Корректная обработка полюсов
-    //     if (Math.abs(p) < 1e-6) {
-    //         lat = Z > 0 ? Math.PI/2 : -Math.PI/2;
-    //         h = Math.abs(Z) - EARTH_A * Math.sqrt(1 - EARTH_E2);
-    //     }
-        
-    //     return {
-    //         latitude: lat * 180/Math.PI,
-    //         longitude: lon * 180/Math.PI,
-    //         height: h,
-    //         lat: lat * 180/Math.PI,
-    //         lon: lon * 180/Math.PI,
-    //         alt: h
-    //     };
-    // }
-
-    // Пример использования
-    // const glonassParams = {
-    //         T_Omega : test_ka.Tomega,    // Время прохождения восходящего узла (с)
-    //         T_ob : test_ka.Tapp,       // Период обращения (с)
-    //         e : test_ka.e,          // Эксцентриситет
-    //         i : test_ka.i,          // Наклонение (град)
-    //         L_Omega : test_ka.Lomega,    // Долгота восходящего узла (град)
-    //         omega : test_ka.W,      // Аргумент перигея (град)
-    //         DeltaT : 0//Number(test_ka.deltaT)      // Скорость изменения периода (с/с)
-    //     };
-
-    // console.log(glonassParams);
-    
-
+    let test_ka = ephemerisData[num_ka-1]
 
 
 
@@ -438,22 +210,6 @@ async function getData(){
     const baseDate = new Date(+('20'+year), +month - 1, +day); // UTC+3
     const t_receiver = new Date(+('20'+year), +month - 1, +day); // UTC+3
 
-
-    
-
-
-    //         T_Omega : test_ka.Tomega,    // Время прохождения восходящего узла (с)
-    //         T_ob : test_ka.Tapp,       // Период обращения (с)
-    //         e : test_ka.e,          // Эксцентриситет
-    //         i : test_ka.i,          // Наклонение (град)
-    //         L_Omega : test_ka.Lomega,    // Долгота восходящего узла (град)
-    //         omega : test_ka.W,      // Аргумент перигея (град)
-    //         DeltaT : 0//Number(test_ka.deltaT)      // Скорость изменения периода (с/с)
-
-
-
-    const currentTime = 0; // Текущее время (1.5 часа после 00:00)
-
     let trace = []
     for (let currentTime = 0; currentTime < 120000; currentTime+=60) {
         t_receiver.setSeconds(baseDate.getSeconds() + currentTime);
@@ -470,24 +226,8 @@ async function getData(){
             t_receiver,  // Время наблюдения
             currentTime
         );
-
-        // const position = calculateGLONASSPosition(glonassParams, currentTime);
-        // const geodetic = ecefToGeodetic2(position.X, position.Y, position.Z);
         trace.push([result.latitude.toFixed(6), result.longitude.toFixed(6)])
     }
-    
-
-    // console.log("Координаты спутника ГЛОНАСС (ECEF):");
-    // console.log(`X: ${position.X.toFixed(2)} м`);
-    // console.log(`Y: ${position.Y.toFixed(2)} м`);
-    // console.log(`Z: ${position.Z.toFixed(2)} м`);
-
-    
-
-    // console.log("Геодезические координаты спутника ГЛОНАСС:");
-    // console.log(`Широта: ${geodetic.latitude.toFixed(6)}°`);
-    // console.log(`Долгота: ${geodetic.longitude.toFixed(6)}°`);
-    // console.log(`Высота: ${geodetic.height.toFixed(2)} м`);
     return trace
 }
 
@@ -509,7 +249,9 @@ wss1.on('connection', function connection(ws) {
     ws.on('message', async function(message) {
         let json_res = JSON.parse(message)
         if (json_res.get_data) {
-            let out_data = await getData()
+            console.log(json_res.get_data);
+            
+            let out_data = await getData(json_res.get_data)
             clients[id].send(`{"trace_data": ${JSON.stringify(out_data)}}`);
         }
     })
