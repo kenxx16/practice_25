@@ -16,42 +16,75 @@ document.addEventListener("DOMContentLoaded", () => {
 
         var control = L.control.layers(baseMaps, null, { collapsed:true }).addTo(mymap);
 
-        L.polyline([[0, -180], [0, 180]], {color: 'red'}).addTo(mymap);
-        L.polyline([[-90, 0], [90, 0]], {color: 'red'}).addTo(mymap);
+        // L.polyline([[0, -180], [0, 180]], {color: 'red'}).addTo(mymap);
+        // L.polyline([[-90, 0], [90, 0]], {color: 'red'}).addTo(mymap);
     }
 
 
     window.onload = function () {
         var socket = new WebSocket("ws://192.168.153.128:3000/data");
 
-        $('#get_ka').on('click', function(e){
-            socket.send(`{"get_data": ${$('#number_ka').val()}}`)
-        })
+        // $('#get_ka').on('click', function(e){
+        //     socket.send(`{"get_data": ${$('#number_ka').val()}}`)
+        // })
 
         socket.onmessage = function (event) {
             let data = JSON.parse(event.data);
 
-            console.log(data);
-            if (data.trace_data) {
-                trace_arr = []
-                trace_line = 0;
-                trace_arr[trace_line] = []
-                for(let point_i in data.trace_data){
-                    if (point_i != 0) {
-                        if ((Math.sign(data.trace_data[point_i-1][1] > 0))&&(Math.sign(data.trace_data[point_i][1] < 0))) {
-                            trace_line++
-                            trace_arr[trace_line] = []
+            // if (data.trace_data) {
+            //     trace_arr = []
+            //     trace_line = 0;
+            //     trace_arr[trace_line] = []
+            //     for(let point_i in data.trace_data){
+            //         if (point_i != 0) {
+            //             if ((Math.sign(data.trace_data[point_i-1][1] > 0))&&(Math.sign(data.trace_data[point_i][1] < 0))) {
+            //                 trace_line++
+            //                 trace_arr[trace_line] = []
+            //             }
+            //         }
+            //         trace_arr[trace_line].push(data.trace_data[point_i])
+            //     }
+            //     L.polyline(trace_arr, {color: 'blue'}).addTo(mymap);
+            // }
+
+            if (data.trace_data_arr) {
+                console.log(data.trace_data_arr);
+                
+
+                for (let ns of data.trace_data_arr) {
+                    
+                    trace_arr = []
+                    trace_line = 0;
+                    trace_arr[trace_line] = []
+                    for(let point_i in ns){
+                        if (point_i != 0) {
+                            if ((Math.sign(ns[point_i-1][1] > 0))&&(Math.sign(ns[point_i][1] < 0))) {
+                                trace_line++
+                                trace_arr[trace_line] = []
+                            }
+
+                            if ((Math.sign(ns[point_i-1][1] < 0))&&(Math.sign(ns[point_i][1] > 0))) {
+                                trace_line++
+                                trace_arr[trace_line] = []
+                            }
                         }
+                        trace_arr[trace_line].push(ns[point_i])
                     }
-                    trace_arr[trace_line].push(data.trace_data[point_i])
+                    console.log(trace_arr);
+                    L.polyline(trace_arr, {color: 'blue'}).addTo(mymap);            
                 }
-                console.log(trace_arr);
-                L.polyline(trace_arr, {color: 'blue'}).addTo(mymap);
+
+                for (let ns in data.trace_data_arr) {
+                    if(data.trace_data_arr[ns] == null) continue
+
+                    let last_position = data.trace_data_arr[ns][0]
+
+                    L.marker(last_position, {'title': ns})
+                        .addTo(mymap)
+                }
+                
             }
             
-            
-            
-
         }
     }
 })

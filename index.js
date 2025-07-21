@@ -62,18 +62,7 @@ async function getStatus(){
     })
 }
 
-async function getData(num_ka = 1){
-    console.log(num_ka);
-    
-    let ephemerisData = await getEphemeris()
-    let statusData = await getStatus()
-
-    let test_ka = ephemerisData[num_ka-1]
-
-
-
-
-    // Константы
+async function calcTrace(test_ka) {
     const GM = 3.986004418e14;   // Геоцентрическая гравитационная постоянная (м³/с²)
     const OMEGA_E = 7.292115e-5; // Угловая скорость вращения Земли (рад/с)
     const OMEGA_DOT = -2.5467e-9; // Скорость прецессии орбиты ГЛОНАСС (рад/с)
@@ -147,22 +136,30 @@ async function getData(num_ka = 1){
         // const t_rec = t_receiver.getTime(); // Временная метка наблюдения (мс)
         const t_s = offset;               //(t_rec - t_b) / 1000; // Разница во времени (секунды)
         const t_k = t_s - delta_t2;       // Скорректированное время
-        
+        const t_drak = T_period + delta_T * offset;
+
         // 2. Расчет параметров орбиты
         const a = Math.cbrt(GM * T_period*T_period / (4 * Math.PI*Math.PI)); // Большая полуось
         const n0 = 2 * Math.PI / T_period;   // Среднее движение
         const delta_n = (2 * Math.PI * delta_T) / (T_period * T_period); // Коррекция
         const n = n0 + delta_n;              // Скорректированное движение
+
+
         
         // Угловые параметры в радианах
         const i_rad = i_deg * Math.PI / 180;
         const Lomega_rad = Lomega_deg * Math.PI / 180;
         const omega_rad = omega_deg * Math.PI / 180;
+        console.log("omega_rad=" + omega_rad);
+        
         
         // 3. Расчет аномалий
         const M0 = -omega_rad;              // Средняя аномалия на эпоху
         const M_k = M0 + n * t_k;           // Средняя аномалия
+        console.log("M_k=" + M_k);
         const E_k = solveKepler(M_k, e);    // Эксцентрическая аномалия
+        console.log("E_k=" + E_k);
+        
         
         // Истинная аномалия
         const sinE = Math.sin(E_k);
@@ -170,17 +167,25 @@ async function getData(num_ka = 1){
         const sin_nu = Math.sqrt(1 - e*e) * sinE / (1 - e * cosE);
         const cos_nu = (cosE - e) / (1 - e * cosE);
         const nu_k = Math.atan2(sin_nu, cos_nu);
+        console.log("nu_k=" + nu_k);
+    
+
         
         // Аргумент широты
         const u_k = nu_k + omega_rad;
+        console.log(u_k);
+        
         
         // 4. Координаты в орбитальной плоскости
         const r_k = a * (1 - e * cosE);
         const X_orb = r_k * Math.cos(u_k);
         const Y_orb = r_k * Math.sin(u_k);
+        console.log(X_orb, Y_orb);
+        
         
         // 5. Преобразование в инерциальную систему
         const Omega_k = Lomega_rad + (OMEGA_DOT - OMEGA_E) * t_k - OMEGA_E * Tomega;
+        console.log("Omega_k=" + Omega_k);
         
         const cos_Omega = Math.cos(Omega_k);
         const sin_Omega = Math.sin(Omega_k);
@@ -203,58 +208,196 @@ async function getData(num_ka = 1){
         // 7. Преобразование в геодезические координаты
         // return cartesianToGeodetic(X_earth, Y_earth, Z_earth);
         return cartesianToGeodetic(X_iner, Y_iner, Z_iner);
+
     }
 
-    // Пример использования
+
+
+
+
+
+    function calculateGLONASSPosition(almanac, currentDate = new Date()) {
+        const MU = 3.986004418e14;     // Гравитационный параметр Земли (м³/с²)
+        const EARTH_RATE = 7.292115e-5; // Угловая скорость вращения Земли (рад/с)
+        const RAD_TO_DEG = 180 / Math.PI;
+        const DEG_TO_RAD = Math.PI / 180;
+
+        // console.log(almanac);
+
+        
+
+
+        // 1. Парсинг базовой даты и расчет T0 (момент восходящего узла в UTC+3)
+        const [day, month, year] = almanac.date.split('.').map(Number);
+        const fullYear = 2000 + year;
+        
+        // Создание даты в UTC+3 (Московское время)
+        const baseDate = new Date(Date.UTC(fullYear, month - 1, day, 0, 0, 0));
+        const t0 = baseDate.getTime() + almanac.TΩ * 1000;
+
+        // console.log(t0);
+        
+        
+        // 2. Расчет времени, прошедшего с T0 (в секундах)
+        const Δt = (currentDate.getTime() - t0) / 1000 + almanac.offset;
+
+        // console.log(Δt);
+        
+        
+        // 3. Расчет драконического периода
+        const T_drak = almanac.Tоб + almanac.ΔT * Δt;
+        // console.log(almanac.Tоб + almanac.ΔT * Δt);
+        
+        
+        // 4. Расчет средней аномалии на момент TΩ
+        const ω_rad = almanac.ω * DEG_TO_RAD;
+        const ν0 = -ω_rad; // Истинная аномалия в момент TΩ
+        
+        // Расчет эксцентрической аномалии E0 через истинную аномалию ν0
+        const E0 = 2 * Math.atan(Math.sqrt((1 - almanac.e) / (1 + almanac.e)) * Math.tan(ν0 / 2));
+        const M0 = E0 - almanac.e * Math.sin(E0);
+
+        // console.log(M0);
+        
+        
+        // 5. Средняя аномалия на текущий момент
+        const M = M0 + (2 * Math.PI * Δt) / T_drak;
+
+        // console.log(M);
+        
+        
+        // 6. Решение уравнения Кеплера (метод Ньютона)
+        let E = M;
+        for (let i = 0; i < 10; i++) {
+            const f = E - almanac.e * Math.sin(E) - M;
+            const f_prime = 1 - almanac.e * Math.cos(E);
+            E -= f / f_prime;
+            if (Math.abs(f) < 1e-8) break;
+        }
+        
+        // 7. Расчет истинной аномалии и аргумента широты
+        const ν = 2 * Math.atan(Math.sqrt((1 + almanac.e) / (1 - almanac.e)) * Math.tan(E / 2));
+        const u = ν + ω_rad;
+        
+        // 8. Расчет большой полуоси и радиус-вектора
+        const a = Math.pow((T_drak * Math.sqrt(MU)) / (2 * Math.PI), 2 / 3);
+        const r = a * (1 - almanac.e * Math.cos(E));
+        
+        // 9. Координаты в орбитальной плоскости
+        const x_orb = r * Math.cos(u);
+        const y_orb = r * Math.sin(u);
+
+        // console.log(x_orb, y_orb);
+        
+        
+        // 10. Преобразование в земную систему координат (на момент TΩ)
+        const i_rad = almanac.i * DEG_TO_RAD;
+        const LΩ_rad = almanac.LΩ * DEG_TO_RAD;
+        
+        const X0 = x_orb * Math.cos(LΩ_rad) - y_orb * Math.cos(i_rad) * Math.sin(LΩ_rad);
+        const Y0 = x_orb * Math.sin(LΩ_rad) + y_orb * Math.cos(i_rad) * Math.cos(LΩ_rad);
+        const Z0 = y_orb * Math.sin(i_rad);
+        
+        // 11. Учет вращения Земли
+        const rotationAngle = - EARTH_RATE * Δt;
+        const cosθ = Math.cos(rotationAngle);
+        const sinθ = Math.sin(rotationAngle);
+        
+        const X = X0 * cosθ - Y0 * sinθ;
+        const Y = X0 * sinθ + Y0 * cosθ;
+        const Z = Z0;
+
+        // console.log(X, Y, Z);
+        
+        
+        return cartesianToGeodetic( X, Y, Z ); // Координаты в системе ПЗ-90 (метры)
+    }
+
+    
+
+    
     let [day, month, year] = test_ka.datetime.split('.')
     const baseDate = new Date(+('20'+year), +month - 1, +day); // UTC+3
     const t_receiver = new Date(+('20'+year), +month - 1, +day); // UTC+3
 
     let trace = []
-    for (let currentTime = 0; currentTime < 120000; currentTime+=60) {
+    for (let currentTime = 0; currentTime < 45000; currentTime+=60) {
         t_receiver.setSeconds(baseDate.getSeconds() + currentTime);
-        const result = calculateGlonassPosition(
-            baseDate,   // Базовая дата
-            test_ka.Tomega,          // Tomega (сек)
-            test_ka.Tapp,      // T_period (сек) ≈ 11.25 часа
-            test_ka.e,      // e
-            test_ka.i,       // i_deg
-            test_ka.Lomega,       // Lomega_deg
-            test_ka.W,       // omega_deg
-            test_ka.deltaT2,     // delta_t2
-            test_ka.deltaT,          // delta_T
-            t_receiver,  // Время наблюдения
-            currentTime
-        );
-        trace.push([result.latitude.toFixed(6), result.longitude.toFixed(6)])
+        // const result = calculateGlonassPosition(
+        //     baseDate,   // Базовая дата
+        //     test_ka.Tomega,          // Tomega (сек)
+        //     test_ka.Tapp,      // T_period (сек) ≈ 11.25 часа
+        //     test_ka.e,      // e
+        //     test_ka.i,       // i_deg
+        //     test_ka.Lomega,       // Lomega_deg
+        //     test_ka.W,       // omega_deg
+        //     test_ka.deltaT2,     // delta_t2
+        //     test_ka.deltaT,          // delta_T
+        //     t_receiver,  // Время наблюдения
+        //     currentTime
+        // );
+        // trace.push([result.latitude.toFixed(6), result.longitude.toFixed(6)])
+
+
+        const almanac = {
+            ns: test_ka.ns,             // Номер спутника
+            date: test_ka.datetime,   // Базовая дата (ДД.ММ.ГГ)
+            TΩ: +test_ka.Tomega,          // Время восходящего узла (секунды)
+            Tоб: +test_ka.Tapp,         // Период обращения (секунды)
+            e: +test_ka.e,           // Эксцентриситет
+            i: +test_ka.i,            // Наклонение (градусы)
+            LΩ: +test_ka.Lomega,          // Долгота восходящего узла (градусы)
+            ω: +test_ka.W,            // Аргумент перигея (градусы)
+            δt2: +test_ka.deltaT2,        // Поправка времени (секунды)
+            nl: 2,              // Номер литерной частоты
+            ΔT: Number(test_ka.deltaT),        // Скорость изменения периода
+            offset: currentTime
+        };
+
+        const currentDate = new Date();
+        const coordinates = calculateGLONASSPosition(almanac, currentDate);
+        trace.push([coordinates.latitude.toFixed(6), coordinates.longitude.toFixed(6)])
     }
     return trace
 }
 
+async function getData(){
+    return await new Promise(async (resolve, reject) => {
+        let ephemerisData = await getEphemeris()
+        let statusData = await getStatus()
+        var trace_arr = []
+        for(let ka of ephemerisData){
+            console.log(ka);
+            
+            let trace = await calcTrace(ka);
+            if (Number(ka.ns)<9) {
+                trace_arr[Number(ka.ns)] = trace
+            }
+        }
+        return resolve(trace_arr)
+    })
+}
+
 server.listen(3000, function () {
     console.log("SERVER START");
-    // getData()
 })
 
 
 const wss1 = new ws.Server({ noServer: true });
 var clients = {};
 
-wss1.on('connection', function connection(ws) {
+wss1.on('connection', async function connection(ws) {
     let id = Math.random();
     clients[id] = ws;
     console.log("новое соединение " + id);
+
+
+
     clients[id].send('{"status": "OK"}');
 
-    ws.on('message', async function(message) {
-        let json_res = JSON.parse(message)
-        if (json_res.get_data) {
-            console.log(json_res.get_data);
-            
-            let out_data = await getData(json_res.get_data)
-            clients[id].send(`{"trace_data": ${JSON.stringify(out_data)}}`);
-        }
-    })
+    let out_data = await getData()
+    clients[id].send(`{"trace_data_arr": ${JSON.stringify(out_data)}}`);
+
 
     ws.on('close', function() {
         console.log('соединение закрыто ' + id);
