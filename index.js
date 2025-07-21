@@ -27,6 +27,7 @@ let server = http.createServer(function(req, res){
                 let contentType = 'text/html'
                 if (req.url.endsWith('.css')) contentType = 'text/css'
                 if (req.url.endsWith('.js')) contentType = 'text/javascript'
+                if (req.url.endsWith('.svg')) contentType = 'image/svg+xml'
                 if (!err) { // страница существует
                     res.writeHead(200, {"Content-Type": contentType});
                     res.write(fileContent);
@@ -118,101 +119,6 @@ async function calcTrace(test_ka) {
     }
 
     // Главная функция расчета координат спутника
-    function calculateGlonassPosition(
-        baseDate,   // Базовая дата (объект Date в UTC+3)
-        Tomega,     // Время прохождения узла (секунды от базовой даты)
-        T_period,   // Период обращения (секунды)
-        e,          // Эксцентриситет
-        i_deg,      // Наклонение орбиты (градусы)
-        Lomega_deg, // Долгота восходящего узла (градусы)
-        omega_deg,  // Аргумент перигея (градусы)
-        delta_t2,   // Поправка времени (секунды)
-        delta_T,    // Скорость изменения периода (с/с)
-        t_receiver, // Время наблюдения (объект Date в UTC+3)
-        offset
-    ) {
-        // 1. Расчет временных параметров
-        // const t_b = baseDate.getTime();   // Временная метка базовой даты (мс)
-        // const t_rec = t_receiver.getTime(); // Временная метка наблюдения (мс)
-        const t_s = offset;               //(t_rec - t_b) / 1000; // Разница во времени (секунды)
-        const t_k = t_s - delta_t2;       // Скорректированное время
-        const t_drak = T_period + delta_T * offset;
-
-        // 2. Расчет параметров орбиты
-        const a = Math.cbrt(GM * T_period*T_period / (4 * Math.PI*Math.PI)); // Большая полуось
-        const n0 = 2 * Math.PI / T_period;   // Среднее движение
-        const delta_n = (2 * Math.PI * delta_T) / (T_period * T_period); // Коррекция
-        const n = n0 + delta_n;              // Скорректированное движение
-
-
-        
-        // Угловые параметры в радианах
-        const i_rad = i_deg * Math.PI / 180;
-        const Lomega_rad = Lomega_deg * Math.PI / 180;
-        const omega_rad = omega_deg * Math.PI / 180;
-        console.log("omega_rad=" + omega_rad);
-        
-        
-        // 3. Расчет аномалий
-        const M0 = -omega_rad;              // Средняя аномалия на эпоху
-        const M_k = M0 + n * t_k;           // Средняя аномалия
-        console.log("M_k=" + M_k);
-        const E_k = solveKepler(M_k, e);    // Эксцентрическая аномалия
-        console.log("E_k=" + E_k);
-        
-        
-        // Истинная аномалия
-        const sinE = Math.sin(E_k);
-        const cosE = Math.cos(E_k);
-        const sin_nu = Math.sqrt(1 - e*e) * sinE / (1 - e * cosE);
-        const cos_nu = (cosE - e) / (1 - e * cosE);
-        const nu_k = Math.atan2(sin_nu, cos_nu);
-        console.log("nu_k=" + nu_k);
-    
-
-        
-        // Аргумент широты
-        const u_k = nu_k + omega_rad;
-        console.log(u_k);
-        
-        
-        // 4. Координаты в орбитальной плоскости
-        const r_k = a * (1 - e * cosE);
-        const X_orb = r_k * Math.cos(u_k);
-        const Y_orb = r_k * Math.sin(u_k);
-        console.log(X_orb, Y_orb);
-        
-        
-        // 5. Преобразование в инерциальную систему
-        const Omega_k = Lomega_rad + (OMEGA_DOT - OMEGA_E) * t_k - OMEGA_E * Tomega;
-        console.log("Omega_k=" + Omega_k);
-        
-        const cos_Omega = Math.cos(Omega_k);
-        const sin_Omega = Math.sin(Omega_k);
-        const cos_i = Math.cos(i_rad);
-        const sin_i = Math.sin(i_rad);
-        
-        const X_iner = X_orb * cos_Omega - Y_orb * cos_i * sin_Omega;
-        const Y_iner = X_orb * sin_Omega + Y_orb * cos_i * cos_Omega;
-        const Z_iner = Y_orb * sin_i;
-        
-        // 6. Учет вращения Земли
-        const theta_k = OMEGA_E * t_s;
-        const cos_theta = Math.cos(theta_k);
-        const sin_theta = Math.sin(theta_k);
-        
-        const X_earth = X_iner * cos_theta + Y_iner * sin_theta;
-        const Y_earth = -X_iner * sin_theta + Y_iner * cos_theta;
-        const Z_earth = Z_iner;
-        
-        // 7. Преобразование в геодезические координаты
-        // return cartesianToGeodetic(X_earth, Y_earth, Z_earth);
-        return cartesianToGeodetic(X_iner, Y_iner, Z_iner);
-
-    }
-
-
-
 
 
 
@@ -321,7 +227,7 @@ async function calcTrace(test_ka) {
     const t_receiver = new Date(+('20'+year), +month - 1, +day); // UTC+3
 
     let trace = []
-    for (let currentTime = 0; currentTime < 45000; currentTime+=60) {
+    for (let currentTime = 0; currentTime > -45000; currentTime-=60) {
         t_receiver.setSeconds(baseDate.getSeconds() + currentTime);
         // const result = calculateGlonassPosition(
         //     baseDate,   // Базовая дата
@@ -356,7 +262,11 @@ async function calcTrace(test_ka) {
 
         const currentDate = new Date();
         const coordinates = calculateGLONASSPosition(almanac, currentDate);
-        trace.push([coordinates.latitude.toFixed(6), coordinates.longitude.toFixed(6)])
+        let stat = 1
+        if (currentTime < -30000 && currentTime > -35000 && test_ka.ns == "06") {
+            stat = 15
+        }
+        trace.push([coordinates.latitude.toFixed(6), coordinates.longitude.toFixed(6), stat])
     }
     return trace
 }
@@ -365,10 +275,18 @@ async function getData(){
     return await new Promise(async (resolve, reject) => {
         let ephemerisData = await getEphemeris()
         let statusData = await getStatus()
+
+        console.log(statusData);
+
+        for (const stat of statusData) {
+            if (stat.name != "flags") {
+                console.log(stat.data);
+                
+            }
+        }
+        
         var trace_arr = []
-        for(let ka of ephemerisData){
-            console.log(ka);
-            
+        for(let ka of ephemerisData){            
             let trace = await calcTrace(ka);
             if (Number(ka.ns)<9) {
                 trace_arr[Number(ka.ns)] = trace

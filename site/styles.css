@@ -1,0 +1,20 @@
+*{
+    box-sizing: border-box;
+    margin: 0;
+}
+
+#map{
+    height: 100vh;
+}
+
+.leaflet-tooltip-right {
+    left: 16px !important;
+}
+
+.leaflet-tooltip-left {
+    left: -16px !important;
+}
+
+.leaflet-tooltip{
+    padding: 0 6px !important;
+}

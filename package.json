@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js --ext html,css,js"
+    "start": "nodemon index.js --ext html,css,js host -0.0.0.0"
   },
   "repository": {
     "type": "git",
